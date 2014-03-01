@@ -159,6 +159,10 @@ def main():
         root = ET.fromstring(f.read())
 
     frw_fixts = root.find('Fixtures')
+    if frw_fixts is None:
+        log("Couldn't find 'Fixtures' tag in file, aborting")
+        return
+
     if len(frw_fixts) == 0:
         log("No fixtures defined in file, exiting")
         return
