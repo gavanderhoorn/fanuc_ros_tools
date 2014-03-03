@@ -18,7 +18,7 @@
 # 
 # Converts information about fixtures in a Roboguide Work Cell into
 # a MoveIt Scene description file. Only supports geometric primitive
-# fixtures (box, cylinder) for now.
+# fixtures (box, cylinder, sphere) for now.
 # 
 # References:
 #  - http://moveit.ros.org/wiki/Scene_Format
@@ -62,6 +62,12 @@ def gen_moveit_scene_cylinder(elem):
     )
 
 
+def gen_moveit_scene_sphere(elem):
+    return "1\nsphere\n{radius}".format(
+        radius=float(elem.get('ScaleX', 0))
+    )
+
+
 def fanuc_wpr_to_quaternion(elem):
     w = float(elem.get('LocationW', 0))
     p = float(elem.get('LocationP', 0))
@@ -77,6 +83,7 @@ def fanuc_wpr_to_quaternion(elem):
 
 
 FRW_FIXT_BOX      = 0
+FRW_FIXT_SPHERE   = 2
 FRW_FIXT_CYLINDER = 3
 
 def gen_moveit_scene_shape(elem):
@@ -85,6 +92,8 @@ def gen_moveit_scene_shape(elem):
 
     if fkind == FRW_FIXT_BOX:
         inner = gen_moveit_scene_box(elem)
+    elif fkind == FRW_FIXT_SPHERE:
+        inner = gen_moveit_scene_sphere(elem)
     elif fkind == FRW_FIXT_CYLINDER:
         inner = gen_moveit_scene_cylinder(elem)
     else:
