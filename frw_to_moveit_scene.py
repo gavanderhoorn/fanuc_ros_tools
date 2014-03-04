@@ -68,6 +68,16 @@ def gen_moveit_scene_sphere(elem):
     )
 
 
+def vb_color_to_rgba(vb_color):
+    clr = int(vb_color[2:], 16)
+    # bgr
+    b = ((clr >> (2 * 8)) & 0xFF)
+    g = ((clr >> (1 * 8)) & 0xFF)
+    r = ((clr >> (0 * 8)) & 0xFF)
+    # rgba
+    return (r / 255.0, g / 255.0, b / 255.0, 1.0)
+
+
 def fanuc_wpr_to_quaternion(elem):
     w = float(elem.get('LocationW', 0))
     p = float(elem.get('LocationP', 0))
@@ -103,6 +113,9 @@ def gen_moveit_scene_shape(elem):
     # calc quaternion from WPR
     quat = fanuc_wpr_to_quaternion(elem)
 
+    # calc rgba colour
+    colour = vb_color_to_rgba(elem.get('Color'))
+
     fmt = """* {object_name}
 {shape_geometry}
 {tx} {ty} {tz}
@@ -116,7 +129,7 @@ def gen_moveit_scene_shape(elem):
         ty=(float(elem.get('LocationY', 0)) / 1000.0),
         tz=(float(elem.get('LocationZ', 0)) / 1000.0),
         qx=quat[0], qy=quat[1], qz=quat[2], qw=quat[3],
-        cr=0, cg=0, cb=0, ca=1
+        cr=colour[0], cg=colour[1], cb=colour[2], ca=colour[3]
     )
 
 
