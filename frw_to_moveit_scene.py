@@ -96,7 +96,7 @@ FRW_FIXT_BOX      = 0
 FRW_FIXT_SPHERE   = 2
 FRW_FIXT_CYLINDER = 3
 
-def gen_moveit_scene_shape(elem):
+def gen_moveit_scene_shape(elem, offset):
     # dispatch based on object type
     fkind = int(elem.get('Kind'))
 
@@ -125,22 +125,22 @@ def gen_moveit_scene_shape(elem):
     return fmt.format(
         object_name=elem.get('Name'),
         shape_geometry=inner,
-        tx=(float(elem.get('LocationX', 0)) / 1000.0),
-        ty=(float(elem.get('LocationY', 0)) / 1000.0),
-        tz=(float(elem.get('LocationZ', 0)) / 1000.0),
+        tx=(float(elem.get('LocationX', 0)) / 1000.0) + offset[0],
+        ty=(float(elem.get('LocationY', 0)) / 1000.0) + offset[1],
+        tz=(float(elem.get('LocationZ', 0)) / 1000.0) + offset[2],
         qx=quat[0], qy=quat[1], qz=quat[2], qw=quat[3],
         cr=colour[0], cg=colour[1], cb=colour[2], ca=colour[3]
     )
 
 
-def gen_moveit_scene_object(elem):
+def gen_moveit_scene_object(elem, offset):
     elem_name = elem.get('Name')
 
     # see if this fixture is a geometric primitve (crude)
     try:
         if 'Kind' in elem.attrib:
             # yes, generate
-            return gen_moveit_scene_shape(elem)
+            return gen_moveit_scene_shape(elem, offset)
 
         # no, something else, unsupported
         if _verbose_g:
@@ -154,14 +154,14 @@ def gen_moveit_scene_object(elem):
     return ''
 
 
-def gen_moveit_scene(elem_fixtures):
+def gen_moveit_scene(elem_fixtures, offset=(0, 0, 0)):
     res = 'noname\n'
 
     logv('Exporting %d fixtures to MoveIt scene format' % len(elem_fixtures))
 
     for fixt in elem_fixtures.iter('Fixture'):
         logv("  Found '%s'" % fixt.get('Name'))
-        res += gen_moveit_scene_object(fixt)
+        res += gen_moveit_scene_object(fixt, offset)
 
     res += '.\n'
     return res
@@ -174,6 +174,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true',
             dest='verbose', help='Be verbose')
+    parser.add_argument('--offset', type=str, metavar='OFFSET',
+            default="0 0 0", dest='offset', help="Translate objects in FRW "
+            "by OFFSET before exporting to MoveIt scene. Format: 'x y z' "
+            "(m, float, default: %(default)s)")
     parser.add_argument('file_input', type=str, metavar='INPUT',
             help="Roboguide Work Cell file (*.frw)")
     parser.add_argument('file_output', type=str, metavar='OUTPUT',
@@ -201,7 +205,8 @@ def main():
 
     logv('Found %d fixture tags' % len(frw_fixts))
 
-    moveit_scene_str = gen_moveit_scene(frw_fixts)
+    offset = [float(x) for x in args.offset.split(' ')]
+    moveit_scene_str = gen_moveit_scene(frw_fixts, offset=offset)
 
     logv('Saving result')
 
