@@ -154,8 +154,8 @@ def gen_moveit_scene_object(elem, offset):
     return ''
 
 
-def gen_moveit_scene(elem_fixtures, offset=(0, 0, 0)):
-    res = 'noname\n'
+def gen_moveit_scene(elem_fixtures, scene_name="noname", offset=(0, 0, 0)):
+    res = '%s\n' % scene_name
 
     logv('Exporting %d fixtures to MoveIt scene format' % len(elem_fixtures))
 
@@ -174,6 +174,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true',
             dest='verbose', help='Be verbose')
+    parser.add_argument('--scene-name', type=str, metavar='NAME',
+            default='noname', dest='scene_name', help='Name of MoveIt scene '
+            '(default: %(default)s)')
     parser.add_argument('--offset', type=str, metavar='OFFSET',
             default="0 0 0", dest='offset', help="Translate objects in FRW "
             "by OFFSET before exporting to MoveIt scene. Format: 'x y z' "
@@ -206,7 +209,8 @@ def main():
     logv('Found %d fixture tags' % len(frw_fixts))
 
     offset = [float(x) for x in args.offset.split(' ')]
-    moveit_scene_str = gen_moveit_scene(frw_fixts, offset=offset)
+    moveit_scene_str = gen_moveit_scene(frw_fixts, scene_name=args.scene_name,
+        offset=offset)
 
     logv('Saving result')
 
