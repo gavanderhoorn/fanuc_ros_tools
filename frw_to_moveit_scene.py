@@ -192,6 +192,12 @@ def main():
     global _verbose_g
     _verbose_g = args.verbose
 
+    # check
+    # TODO: http://stackoverflow.com/a/9979169
+    if len(args.offset.split(' ')) != 3 or ',' in args.offset:
+        log("Invalid offset specified. Format: 'x y z' (no commas).\n")
+        return
+
     # open the file
     with open(args.file_input, 'r') as f:
         # get frw contents
