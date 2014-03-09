@@ -214,9 +214,12 @@ def main():
 
     logv('Found %d fixture tags' % len(frw_fixts))
 
-    offset = [float(x) for x in args.offset.split(' ')]
+    offsets = [float(x) for x in args.offset.split(' ')]
+    if not all(offset == 0 for offset in offsets):
+        logv('Using offsets (x, y, z): (%.3f; %.3f; %.3f)' % tuple(offsets))
+
     moveit_scene_str = gen_moveit_scene(frw_fixts, scene_name=args.scene_name,
-        offset=offset)
+        offset=offsets)
 
     logv('Saving result')
 
