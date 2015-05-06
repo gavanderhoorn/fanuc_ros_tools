@@ -30,7 +30,7 @@ import sys
 import math
 import xml.etree.ElementTree as ET
 
-from transformations import quaternion_from_euler
+from transforms3d.euler import euler2quat
 
 
 
@@ -85,7 +85,7 @@ def fanuc_wpr_to_quaternion(elem):
 
     #sys.stderr.write("wpr: %.4f, %.4f, %.4f\n" % (w, p, r))
 
-    return quaternion_from_euler(
+    return euler2quat(
         math.radians(r),  # R_oll
         math.radians(p),  # P_itch
         math.radians(w)   # ya_W
