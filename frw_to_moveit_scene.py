@@ -49,9 +49,9 @@ def logv(msg):
 
 def gen_moveit_scene_box(elem):
     return "1\nbox\n{sx} {sy} {sz}".format(
-        sx=float(elem.get('ScaleX', 0)),
-        sy=float(elem.get('ScaleY', 0)),
-        sz=float(elem.get('ScaleZ', 0))
+        sx=float(elem.get('ScaleX', 1.0)),
+        sy=float(elem.get('ScaleY', 1.0)),
+        sz=float(elem.get('ScaleZ', 1.0))
     )
 
 
