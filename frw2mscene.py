@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # Software License Agreement (Apache License)
 #
-# Copyright (c) 2014, TU Delft Robotics Institute
+# Copyright (c) 2014, 2015, TU Delft Robotics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,23 +14,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# 
-# 
+#
+#
 # Converts information about fixtures in a Roboguide Work Cell into
 # a MoveIt Scene description file. Only supports geometric primitive
 # fixtures (box, cylinder, sphere) for now.
-# 
+#
 # References:
 #  - http://moveit.ros.org/wiki/Scene_Format
-# 
-# 
+#
+#
 # author: G.A. vd. Hoorn (TU Delft Robotics Institute)
-# 
+#
 import sys
 import math
-import xml.etree.ElementTree as ET
 
 from transforms3d.euler import euler2quat
+
+from frfformats import frw_reader
+from frfformats.frw import FrwShapeKind
+
 
 
 
@@ -47,74 +50,58 @@ def logv(msg):
         log(msg)
 
 
-def gen_moveit_scene_box(elem):
+def gen_moveit_scene_box(fixt):
     return "1\nbox\n{sx} {sy} {sz}".format(
-        sx=float(elem.get('ScaleX', 1.0)),
-        sy=float(elem.get('ScaleY', 1.0)),
-        sz=float(elem.get('ScaleZ', 1.0))
-    )
+        sx=fixt.scale.x,
+        sy=fixt.scale.y,
+        sz=fixt.scale.z)
 
 
-def gen_moveit_scene_cylinder(elem):
+def gen_moveit_scene_cylinder(fixt):
     return "1\ncylinder\n{radius} {length}".format(
-        radius=float(elem.get('ScaleX', 0)) / 2.0,
-        length=float(elem.get('ScaleY', 0))
-    )
+        radius=fixt.scale.x / 2.0,
+        length=fixt.scale.y)
 
 
-def gen_moveit_scene_sphere(elem):
-    return "1\nsphere\n{radius}".format(
-        radius=float(elem.get('ScaleX', 0))
-    )
+def gen_moveit_scene_sphere(fixt):
+    return "1\nsphere\n{radius}".format(radius=fixt.scale.x)
 
 
-def vb_color_to_rgba(vb_color):
-    clr = int(vb_color[2:], 16)
-    # bgr
-    b = ((clr >> (2 * 8)) & 0xFF)
-    g = ((clr >> (1 * 8)) & 0xFF)
-    r = ((clr >> (0 * 8)) & 0xFF)
-    # rgba
-    return (r / 255.0, g / 255.0, b / 255.0, 1.0)
-
-
-def fanuc_wpr_to_quaternion(elem):
-    w = float(elem.get('LocationW', 0))
-    p = float(elem.get('LocationP', 0))
-    r = float(elem.get('LocationR', 0))
-
-    #sys.stderr.write("wpr: %.4f, %.4f, %.4f\n" % (w, p, r))
-
+def fanuc_wpr_to_quaternion(fixt):
     return euler2quat(
-        math.radians(r),  # R_oll
-        math.radians(p),  # P_itch
-        math.radians(w)   # ya_W
+        math.radians(fixt.location.w),  # R_oll
+        math.radians(fixt.location.p),  # P_itch
+        math.radians(fixt.location.r)   # ya_W
     )
 
 
-FRW_FIXT_BOX      = 0
-FRW_FIXT_SPHERE   = 2
-FRW_FIXT_CYLINDER = 3
 
-def gen_moveit_scene_shape(elem, offset):
+def gen_moveit_scene_shape(fixt, offset):
     # dispatch based on object type
-    fkind = int(elem.get('Kind'))
+    fkind = fixt.kind
 
-    if fkind == FRW_FIXT_BOX:
-        inner = gen_moveit_scene_box(elem)
-    elif fkind == FRW_FIXT_SPHERE:
-        inner = gen_moveit_scene_sphere(elem)
-    elif fkind == FRW_FIXT_CYLINDER:
-        inner = gen_moveit_scene_cylinder(elem)
+    if fkind == FrwShapeKind.BOX:
+        inner = gen_moveit_scene_box(fixt)
+    elif fkind == FrwShapeKind.SPHERE:
+        inner = gen_moveit_scene_sphere(fixt)
+    elif fkind == FrwShapeKind.CYLINDER:
+        inner = gen_moveit_scene_cylinder(fixt)
     else:
-        raise UnknownFanucFrwObjectKind("Kind '%d' is an "
-            "unknown fixture kind" % fkind)
+        raise UnknownFanucFrwObjectKind("'%s' is an "
+            "unsupported fixture kind for '%s'" % (fkind, fixt.name))
 
     # calc quaternion from WPR
-    quat = fanuc_wpr_to_quaternion(elem)
+    quat = fanuc_wpr_to_quaternion(fixt)
 
     # calc rgba colour
-    colour = vb_color_to_rgba(elem.get('Color'))
+    colour = fixt.colour.as_rgba_tuple()
+
+    # Roboguide places origin of boxes on the top, whereas ROS / MoveIt
+    # has them in the centre of the object. Compensate.
+    tz = fixt.location.z
+    if fixt.kind == FrwShapeKind.BOX:
+        # scale needs to be multiplied by 1000, since it is in 'meters'
+        tz = fixt.location.z - ((fixt.scale.z * 1000.0) / 2.0)
 
     fmt = """* {object_name}
 {shape_geometry}
@@ -123,44 +110,34 @@ def gen_moveit_scene_shape(elem, offset):
 {cr} {cg} {cb} {ca}
 """
     return fmt.format(
-        object_name=elem.get('Name'),
+        object_name=fixt.name,
         shape_geometry=inner,
-        tx=(float(elem.get('LocationX', 0)) / 1000.0) + offset[0],
-        ty=(float(elem.get('LocationY', 0)) / 1000.0) + offset[1],
-        tz=(float(elem.get('LocationZ', 0)) / 1000.0) + offset[2],
+        tx=(fixt.location.x / 1000.0) + offset[0],
+        ty=(fixt.location.y / 1000.0) + offset[1],
+        tz=(tz / 1000.0) + offset[2],
         qx=quat[0], qy=quat[1], qz=quat[2], qw=quat[3],
         cr=colour[0], cg=colour[1], cb=colour[2], ca=colour[3]
     )
 
 
-def gen_moveit_scene_object(elem, offset):
-    elem_name = elem.get('Name')
+def gen_moveit_scene_object(fixt, offset):
+    elem_name = fixt.name
 
     # see if this fixture is a geometric primitve (crude)
     try:
-        if 'Kind' in elem.attrib:
-            # yes, generate
-            return gen_moveit_scene_shape(elem, offset)
-
-        # no, something else, unsupported
-        if _verbose_g:
-            log("    Non-geometric fixtures unsupported, skipping")
-        else:
-            log("Fixture '%s' is not a geometric shape, skipping" % elem_name)
-
+        return gen_moveit_scene_shape(fixt, offset)
     except Exception, e:
         log("Skipping '%s', error processing: %s" % (elem_name, e.message))
-
     return ''
 
 
-def gen_moveit_scene(elem_fixtures, scene_name="noname", offset=(0, 0, 0)):
+def gen_moveit_scene(fixts, scene_name="noname", offset=(0, 0, 0)):
     res = '%s\n' % scene_name
 
-    logv('Exporting %d fixtures to MoveIt scene format' % len(elem_fixtures))
+    logv('Exporting %d fixtures to MoveIt scene format' % len(fixts))
 
-    for fixt in elem_fixtures.iter('Fixture'):
-        logv("  Found '%s'" % fixt.get('Name'))
+    for fixt in fixts:
+        logv("  Found '%s'" % fixt.name)
         res += gen_moveit_scene_object(fixt, offset)
 
     res += '.\n'
@@ -198,27 +175,19 @@ def main():
         log("Invalid offset specified. Format: 'x y z' (no commas).\n")
         return
 
-    # open the file
-    with open(args.file_input, 'r') as f:
-        # get frw contents
-        root = ET.fromstring(f.read())
+    # load the cell description from the file
+    cell = frw_reader.load_file(args.file_input)
 
-    frw_fixts = root.find('Fixtures')
-    if frw_fixts is None:
-        log("Couldn't find 'Fixtures' tag in file, aborting")
-        return
-
-    if len(frw_fixts) == 0:
+    if len(cell.fixtures) == 0:
         log("No fixtures defined in file, exiting")
         return
-
-    logv('Found %d fixture tags' % len(frw_fixts))
+    logv('Found %d fixtures in cell' % len(cell.fixtures))
 
     offsets = [float(x) for x in args.offset.split(' ')]
     if not all(offset == 0 for offset in offsets):
         logv('Using offsets (x, y, z): (%.3f; %.3f; %.3f)' % tuple(offsets))
 
-    moveit_scene_str = gen_moveit_scene(frw_fixts, scene_name=args.scene_name,
+    moveit_scene_str = gen_moveit_scene(cell.fixtures, scene_name=args.scene_name,
         offset=offsets)
 
     logv('Saving result')

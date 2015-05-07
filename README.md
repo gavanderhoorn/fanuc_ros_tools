@@ -16,10 +16,16 @@ Only geometric fixtures are supported for now (ie: boxes, spheres and cylinders)
 
 ## Installation
 
-The scripts in this repository currently only depend on the [transforms3d][] package, which can be installed using `pip`:
+The scripts in this repository depend on the following packages:
+
+ - [transforms3d][]
+ - [frfformats][]
+
+Both of these can be installed using `pip` ([transforms3d][] may also be available for installation through the package manager of your OS):
 
 ```
-(sudo) pip install transforms3d
+(sudo -H) pip install git+https://github.com/gavanderhoorn/frfformats.git
+(sudo -H) pip install transforms3d
 ```
 
 Now just clone the `fanuc_ros_tools` repository and run the scripts directly. No further steps are required.
@@ -27,3 +33,4 @@ Now just clone the `fanuc_ros_tools` repository and run the scripts directly. No
 
 
 [transforms3d]: https://github.com/matthew-brett/transforms3d
+[frfformats]: https://github.com/gavanderhoorn/frfformats
