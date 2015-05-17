@@ -28,6 +28,7 @@
 #
 import sys
 import math
+import logging
 
 from transforms3d.euler import euler2quat
 
@@ -35,19 +36,11 @@ from frfformats import frw_reader
 from frfformats.frw import FrwShapeKind
 
 
-
+logger=None
 
 
 class UnknownFanucFrwObjectKind(Exception):
     pass
-
-
-_verbose_g = False
-def log(msg):
-    sys.stderr.write(msg + '\n')
-def logv(msg):
-    if _verbose_g:
-        log(msg)
 
 
 def gen_moveit_scene_box(fixt):
@@ -88,7 +81,7 @@ def gen_moveit_scene_shape(fixt, offset):
         inner = gen_moveit_scene_cylinder(fixt)
     else:
         raise UnknownFanucFrwObjectKind("'%s' is an "
-            "unsupported fixture kind for '%s'" % (fkind, fixt.name))
+            "unsupported fixture kind for '%s'" % (fkind.name, fixt.name))
 
     # calc quaternion from WPR
     quat = fanuc_wpr_to_quaternion(fixt)
@@ -127,17 +120,17 @@ def gen_moveit_scene_object(fixt, offset):
     try:
         return gen_moveit_scene_shape(fixt, offset)
     except Exception, e:
-        log("Skipping '%s', error processing: %s" % (elem_name, e.message))
+        _logger.warning("Skipping '%s', error processing: %s" % (elem_name, e.message))
     return ''
 
 
 def gen_moveit_scene(fixts, scene_name="noname", offset=(0, 0, 0)):
     res = '%s\n' % scene_name
 
-    logv('Exporting %d fixtures to MoveIt scene format' % len(fixts))
+    _logger.debug('Exporting %d fixtures to MoveIt scene format', len(fixts))
 
     for fixt in fixts:
-        logv("  Found '%s'" % fixt.name)
+        _logger.debug("  Found '%s'", fixt.name)
         res += gen_moveit_scene_object(fixt, offset)
 
     res += '.\n'
@@ -166,45 +159,43 @@ def main():
 
     # handle all arguments
     args = parser.parse_args()
-    global _verbose_g
-    _verbose_g = args.verbose
+
+    global _logger
+    logging.basicConfig(format='%(levelname)s - %(message)s', level=logging.INFO)
+    _logger = logging.getLogger('frw2mscene')
+    if args.verbose:
+        _logger.setLevel(logging.DEBUG)
 
     # check
     # TODO: http://stackoverflow.com/a/9979169
     if len(args.offset.split(' ')) != 3 or ',' in args.offset:
-        log("Invalid offset specified. Format: 'x y z' (no commas).\n")
+        _logger.error("Invalid offset specified. Format: 'x y z' (no commas).\n")
         return
 
     # load the cell description from the file
     cell = frw_reader.load_file(args.file_input)
 
     if len(cell.fixtures) == 0:
-        log("No fixtures defined in file, exiting")
+        _logger.info("No fixtures defined in file, exiting")
         return
-    logv('Found %d fixtures in cell' % len(cell.fixtures))
+    _logger.debug('Found %d fixtures in cell', len(cell.fixtures))
 
     offsets = [float(x) for x in args.offset.split(' ')]
     if not all(offset == 0 for offset in offsets):
-        logv('Using offsets (x, y, z): (%.3f; %.3f; %.3f)' % tuple(offsets))
+        _logger.debug('Using offsets (x, y, z): (%.3f; %.3f; %.3f)' % tuple(offsets))
 
     moveit_scene_str = gen_moveit_scene(cell.fixtures, scene_name=args.scene_name,
         offset=offsets)
 
-    logv('Saving result')
+    _logger.info('Saving conversion result ..')
 
     if args.file_output:
         with open(args.file_output, 'w') as f:
             f.write(moveit_scene_str)
     else:
-        # only print lines if not redirected
-        if sys.stdout.isatty():
-            log('\n-----------------------------cut-here---')
         sys.stdout.write(moveit_scene_str)
-        if sys.stdout.isatty():
-            log('-----------------------------cut-here---')
 
-    logv('Done')
-    log('')
+    _logger.info('Done')
 
 
 if __name__ == '__main__':
