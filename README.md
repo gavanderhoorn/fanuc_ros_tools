@@ -3,7 +3,7 @@
 
 ## Overview
 
-A small collection of tools that can be useful when using a Fanuc robot with ROS.
+A small collection of tools that can be useful when using a Fanuc robot with ROS-Industrial.
 
 
 ## Installation
@@ -13,14 +13,29 @@ The scripts in this repository depend on the following packages:
  - [transforms3d][]
  - [frfformats][]
 
-Both of these can be installed using `pip` ([transforms3d][] may also be available for installation through the package manager of your OS):
+Installation with `pip` will take care of all dependencies.
+
+Note that `transforms3d` may also be available for installation through the package manager of your OS, in which case you might want to install that first. If not, it will be installed automatically from pypi by `pip`.
+
+In a terminal window:
 
 ```shell
-(sudo -H) pip install git+https://github.com/gavanderhoorn/frfformats.git
-(sudo -H) pip install transforms3d
+(sudo -H) pip install -r https://raw.githubusercontent.com/gavanderhoorn/fanuc_ros_tools/master/requirements.txt
+(sudo -H) pip install git+https://github.com/gavanderhoorn/fanuc_ros_tools.git
 ```
 
-Now just clone the `fanuc_ros_tools` repository and run the scripts directly. No further steps are required.
+Specific released versions may be installed with:
+
+```shell
+cd /some/tmp/dir
+wget https://github.com/gavanderhoorn/fanuc_ros_tools/archive/0.0.5.zip
+unzip 0.0.5.zip
+
+(sudo -H) pip install -r fanuc_ros_tools-0.0.5/requirements.txt
+(sudo -H) pip install fanuc_ros_tools-0.0.5
+```
+
+In all cases the utility scripts will be placed on the path, so should be usable from anywhere.
 
 
 ## Example use
@@ -36,7 +51,7 @@ Only geometric Fixtures are supported for now (ie: boxes, spheres and cylinders)
 Example invocation:
 
 ```shell
-frw2mscene.py -v \
+frw2mscene -v \
   --scene-name my_workcell \
   /path/to/fanuc/workcell/file.frw \
   /path/to/output/my_workcell.scene
