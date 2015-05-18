@@ -16,7 +16,7 @@ This tool can convert Fixtures defined in a Fanuc Roboguide Workcell XML file (`
 
 Only geometric Fixtures are supported for now (ie: boxes, spheres and cylinders).
 
-Example invocation:
+#### Example invocation
 
 ```shell
 frw2mscene -v \
@@ -26,6 +26,12 @@ frw2mscene -v \
 ```
 
 The resulting `.scene` file can be imported using the *Import From Text* button on the *Scene Objects* tab of the MoveIt plugin in RViz.
+
+#### Status / know limitations
+
+ - no support for mesh resources (no CAD files)
+ - no support for Obstacles, Machines, Parts, Dress-outs, or anything else but Fixtures
+ - no support for unicode object names (diacritics, accents, ligatures, etc)
 
 ### frw2xacro
 
@@ -37,7 +43,7 @@ Note: actual conversion of meshes should still be done manually, as the tool wil
 
 Note also that the generated xacro generates a macro definition _only_. The macro will have to be called / instantiated in another file first, before it can be loaded into a `robot_description` parameter or similar.
 
-Example invocation:
+#### Example invocation
 
 ```shell
 frw2xacro -v \
@@ -46,6 +52,13 @@ frw2xacro -v \
   /path/to/fanuc/workcell/file.frw \
   /path/to/output/my_workcell_macro.xacro
 ```
+
+#### Status / know limitations
+
+ - no support for multi-file CAD objects
+ - no automatic conversion of (csb) mesh resources
+ - no support for Machines, Parts, Dress-outs, or anything else but Fixtures and Obstacles
+ - no support for unicode object names (diacritics, accents, ligatures, etc)
 
 
 ## Installation
