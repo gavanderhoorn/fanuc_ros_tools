@@ -1,0 +1,134 @@
+#!/usr/bin/python
+
+# Software License Agreement (Apache License)
+#
+# Copyright (c) 2015, TU Delft Robotics Institute
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# author: G.A. vd. Hoorn (TU Delft Robotics Institute)
+#
+
+
+import sys
+import logging
+
+from frfformats import frw_reader
+
+from fanuc_ros_tools.frw import to_xacro
+from fanuc_ros_tools.frw.utils import list_frw_contents
+
+
+def pretty_print(xml):
+    import lxml.etree as et
+    return et.tostring(et.fromstring(xml),
+        xml_declaration=True,
+        pretty_print=True)
+
+
+def main():
+    import argparse
+
+    pkg_name_default = 'frw_pkg'
+
+    # parse command line opts
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-v', '--verbose', action='store_true',
+            dest='verbose', help='Be verbose')
+    parser.add_argument('--no-pretty', action='store_true',
+            dest='no_pretty', help='Do not attempt to pretty print xacro xml.')
+    parser.add_argument('-i', '--info', action='store_true',
+            dest='show_info', help='Display some info on discovered objects '
+            'in FRW, do not convert anything. All other arguments will be '
+            'ignored.')
+    parser.add_argument('-m', '--macro-name', type=str, metavar='NAME',
+            dest='macro_name', help='Name of xacro macro '
+            '(default: name of Roboguide work cell)')
+    parser.add_argument('-p', '--package', type=str, metavar='NAME',
+            dest='pkg_name', help='Name of the package that contains (mesh) '
+            'resources (default: ' + pkg_name_default  + ')')
+    # parser.add_argument('--include-uframes', action='store_true',
+    #         dest='include_uframes', help='Include all defined user frames in '
+    #         'generated xacro macro (not implemented)')
+    # parser.add_argument('--include-utools', action='store_true',
+    #         dest='include_utools', help='Include all defined tool frames in '
+    #         'generated xacro macro (not implemented)')
+    # parser.add_argument('--mesh-ext', type=str, metavar='EXT',
+    #         dest='mesh_ext', help='Override file extension of meshes for '
+    #         'converted CAD objects (not implemented)')
+    # parser.add_argument('--mesh-path', type=str, metavar='PATH',
+    #         dest='mesh_path', help='Relative path to location within package '
+    #         'where meshes will be stored (not implemented)')
+    # parser.add_argument('--base-link', type=str, metavar='NAME',
+    #         default='base_link', dest='base_link', help='Override name of base '
+    #         'link of generated xacro macro (default: %(default)s) (not implemented)')
+    # parser.add_argument('--include', type=str, metavar='NAMES',
+    #         dest='includes', help="May be used to provide a list of named objects "
+    #         "that should be included in the conversion. Only objects in this list "
+    #         "will be made part of the resulting xacro (not implemented)")
+    # parser.add_argument('--exclude', type=str, metavar='NAMES',
+    #         dest='excludes', help="May be used to provide a list of named objects "
+    #         "that should NOT be included in the conversion (not implemented)")
+    # parser.add_argument('--offset', type=str, metavar='OFFSET',
+    #         default="0 0 0", dest='offset', help="Translate objects in FRW "
+    #         "by OFFSET before exporting to xacro. Format: 'x y z' "
+    #         "(m, float, default: %(default)s) (not implemented)")
+    parser.add_argument('file_input', type=str, metavar='INPUT',
+            help="Fanuc Roboguide Work cell file (*.frw)")
+    parser.add_argument('file_output', type=str, metavar='OUTPUT',
+            nargs='?', help="Output file (if not specified, "
+            "stdout will be used)")
+
+
+    args = parser.parse_args()
+
+    logging.basicConfig(format='%(levelname)s - %(message)s', level=logging.INFO)
+    logger = logging.getLogger('frw2xacro')
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+
+    # load the cell description from the file
+    cell = frw_reader.load_file(args.file_input)
+
+    if args.show_info:
+        list_frw_contents(args.file_input, cell)
+        return
+
+    logger.info("Loaded cell '{0}'".format(cell.name))
+    logger.debug('Found {0} fixtures'.format(len(cell.fixtures)))
+    logger.debug('Found {0} obstacles'.format(len(cell.obstacles)))
+
+    macro_name = args.macro_name or cell.name
+    pkg_name   = args.pkg_name or pkg_name_default
+
+    # convert
+    include_uframes = False
+    urdf_str = to_xacro.convert_frw(cell, macro_name, pkg_name, include_uframes)
+    # pretty printing is rather fragile
+    if not args.no_pretty:
+        urdf_str = pretty_print(urdf_str)
+
+    # save
+    logger.info('Saving conversion result ..')
+
+    if args.file_output:
+        with open(args.file_output, 'w') as f:
+            f.write(urdf_str)
+    else:
+        sys.stdout.write(urdf_str)
+
+    logger.info('Done')
+
+
+if __name__ == '__main__':
+    main()
