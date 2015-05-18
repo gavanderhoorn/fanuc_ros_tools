@@ -6,6 +6,48 @@
 A small collection of tools that can be useful when using a Fanuc robot with ROS-Industrial.
 
 
+## Tools
+
+### frw2mscene
+
+![Roboguide and MoveIt scene](https://raw.github.com/gavanderhoorn/fanuc_ros_tools/screenshots/imgs/frw2mscene_example.png)
+
+This tool can convert Fixtures defined in a Fanuc Roboguide Workcell XML file (`.frw`) into objects in a MoveIt scene (`.scene`). This is convenient when you use Roboguide for your kinematics simulation, and don't want to have to recreate the workcell in the MoveIt motion planning plugin.
+
+Only geometric Fixtures are supported for now (ie: boxes, spheres and cylinders).
+
+Example invocation:
+
+```shell
+frw2mscene -v \
+  --scene-name my_workcell \
+  /path/to/fanuc/workcell/file.frw \
+  /path/to/output/my_workcell.scene
+```
+
+The resulting `.scene` file can be imported using the *Import From Text* button on the *Scene Objects* tab of the MoveIt plugin in RViz.
+
+### frw2xacro
+
+![Roboguide and RViz](https://raw.github.com/gavanderhoorn/fanuc_ros_tools/screenshots/imgs/frw2xacro_example.png)
+
+This tool attempts to convert a Fanuc Roboguide Workcell XML file (`.frw`) into a corresponding ROS compatible xacro macro. Currently, only Roboguide Obstacles and Fixtures are supported. Contrary to `frw2mscene`, this tool also supports work cell objects that consist of CAD files.
+
+Note: actual conversion of meshes should still be done manually, as the tool will only include the required urdf element sequences referencing the mesh.
+
+Note also that the generated xacro generates a macro definition _only_. The macro will have to be called / instantiated in another file first, before it can be loaded into a `robot_description` parameter or similar.
+
+Example invocation:
+
+```shell
+frw2xacro -v \
+  --macro-name my_workcell \
+  --package my_workcell_pkg \
+  /path/to/fanuc/workcell/file.frw \
+  /path/to/output/my_workcell_macro.xacro
+```
+
+
 ## Installation
 
 The scripts in this repository depend on the following packages:
@@ -36,28 +78,6 @@ unzip 0.0.5.zip
 ```
 
 In all cases the utility scripts will be placed on the path, so should be usable from anywhere.
-
-
-## Example use
-
-### frw2mscene
-
-![Roboguide and MoveIt scene](https://raw.github.com/gavanderhoorn/fanuc_ros_tools/screenshots/imgs/frw2mscene_example.png)
-
-This tool can convert Fixtures defined in a Fanuc Roboguide Workcell XML file (`.frw`) into objects in a MoveIt scene (`.scene`). This is convenient when you use Roboguide for your kinematics simulation, and don't want to have to recreate the workcell in the MoveIt motion planning plugin.
-
-Only geometric Fixtures are supported for now (ie: boxes, spheres and cylinders).
-
-Example invocation:
-
-```shell
-frw2mscene -v \
-  --scene-name my_workcell \
-  /path/to/fanuc/workcell/file.frw \
-  /path/to/output/my_workcell.scene
-```
-
-The resulting `.scene` file can be imported using the *Import From Text* button on the *Scene Objects* tab of the MoveIt plugin in RViz.
 
 
 
