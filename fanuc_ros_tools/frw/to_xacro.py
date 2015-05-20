@@ -100,7 +100,7 @@ def convert_frw_cell_obj(obj, links, joints, pkg, name_prefix):
         geom_origin[3] = math.pi/-2.0
 
     elif obj.kind == FrwShapeKind.CAD:
-        mesh_file = os.path.basename(obj.cad_file_cached.replace('\\', '/'))
+        mesh_file = os.path.basename(obj.cad_file.cached_file.replace('\\', '/'))
         mesh_file = '{0}.stl'.format(os.path.splitext(mesh_file)[0])
         geom = convert_frw_cad_obj(filename='package://{0}/{1}'.format(pkg, mesh_file))
 
